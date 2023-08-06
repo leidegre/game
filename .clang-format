@@ -1,0 +1,34 @@
+ColumnLimit: 120
+
+AlignConsecutiveAssignments: true
+AlignConsecutiveDeclarations: true
+
+DerivePointerAlignment: false
+PointerAlignment: Left
+
+# Make it easier to set breakpoints
+AllowShortBlocksOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: None
+
+AlignAfterOpenBracket: AlwaysBreak
+BinPackArguments: false
+BinPackParameters: false
+ExperimentalAutoDetectBinPacking: false
+ReflowComments: false
+AlignOperands: Align
+BreakBeforeBinaryOperators: NonAssignment
+PenaltyReturnTypeOnItsOwnLine: 1000 # return type and function name on same line
+AlwaysBreakAfterReturnType: None
+AllowAllParametersOfDeclarationOnNextLine: false
+#https://stackoverflow.com/questions/69537052/clang-format-array-initializer-one-per-line
+# PackConstructorInitializersStyle: CurrentLine # need clang-format 13 for this?
+# AllowAllArgumentsOnNextLine: false
+
+# table like formatting like that in path_test.cc
+AlignArrayOfStructures: Right
+
+# fixes weird issues with designated initializers
+Cpp11BracedListStyle: false

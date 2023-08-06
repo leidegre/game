@@ -1,0 +1,8 @@
+.vscode
+
+t2-output
+.tundra2.*
+
+vendor
+
+imgui.ini
