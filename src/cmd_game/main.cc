@@ -4,11 +4,14 @@
 // This is just what's needed to interface with the platform and DirectX 12 we're not trying to create a generic rendering platform
 // We want to build stuff for Windows.
 
+// Also this file is a complete mess right now.
+
 #include <imgui.h>
 #include <imgui_impl_dx12.h>
 #include <imgui_impl_win32.h>
 
 #include <d3d12.h>
+#include <d3dx12.h> // helpers
 #include <dxgi1_4.h>
 #include <tchar.h>
 
@@ -23,6 +26,8 @@
 
 #pragma comment(lib, "DXGI.lib")  // CreateDXGIFactory1, DXGIGetDebugInterface1
 #pragma comment(lib, "D3d12.lib") // D3D12CreateDevice, D3D12GetDebugInterface
+
+#include <d3dcompiler.h> // The ImGui backend will link d3dcompiler.lib
 
 #include "game.hh"
 
@@ -135,6 +140,116 @@ int main(int, char**) {
 
   GameInit(&game);
 
+  // ---
+
+  struct VertexData {
+    float x_;
+    float y_;
+    float z_;
+  };
+
+  // triangle list
+  // https://learn.microsoft.com/en-us/windows/win32/direct3d11/d3d10-graphics-programming-guide-primitive-topologies#winding-direction-and-leading-vertex-positions
+  VertexData vertex_data[] = {
+    {0, 0, 0},
+    {0, 1, 0},
+    {1, 0, 0},
+    {1, 1, 0},
+    {0, 0, 1},
+    {0, 1, 1},
+    {1, 0, 1},
+    {1, 1, 1},
+  };
+
+  D3D12_HEAP_PROPERTIES heapProperties = {};
+  heapProperties.Type                  = D3D12_HEAP_TYPE_UPLOAD;
+  D3D12_RESOURCE_DESC bufferDesc       = {};
+  bufferDesc.Dimension                 = D3D12_RESOURCE_DIMENSION_BUFFER;
+  bufferDesc.Width                     = sizeof(vertex_data);
+  bufferDesc.Height                    = 1;
+  bufferDesc.DepthOrArraySize          = 1;
+  bufferDesc.MipLevels                 = 1;
+  bufferDesc.Format                    = DXGI_FORMAT_UNKNOWN;
+  bufferDesc.SampleDesc.Count          = 1;
+  bufferDesc.Layout                    = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+  bufferDesc.Flags                     = D3D12_RESOURCE_FLAG_NONE;
+
+  ID3D12Resource* vertexBuffer;
+  g_pd3dDevice->CreateCommittedResource(
+      &heapProperties,
+      D3D12_HEAP_FLAG_NONE,
+      &bufferDesc,
+      D3D12_RESOURCE_STATE_GENERIC_READ,
+      nullptr,
+      IID_PPV_ARGS(&vertexBuffer));
+
+  void* mappedData;
+  vertexBuffer->Map(0, nullptr, &mappedData);
+  memcpy(mappedData, vertex_data, sizeof(vertex_data));
+  vertexBuffer->Unmap(0, nullptr);
+
+  // This is an empty root signature. This means that our shader doesn't have any inputs and outputs other than the vertex data we provide
+  CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
+  rootSignatureDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+  ID3DBlob*            blob = nullptr;
+  ID3D12RootSignature* root_signature;
+  D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &blob, nullptr);
+  g_pd3dDevice->CreateRootSignature(0, blob->GetBufferPointer(), blob->GetBufferSize(), IID_PPV_ARGS(&root_signature));
+  blob->Release();
+
+  D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
+
+  ID3DBlob* vertexShader;
+  ID3DBlob* pixelShader;
+  ID3DBlob* errorBlob;
+
+  D3DCompileFromFile(
+      L"data/shaders/basic.hlsl", // HLSL file to compile
+      nullptr,                    // Optional defines
+      nullptr,                    // Optional include handler
+      "VSMain",                   // Entry point function in HLSL file
+      "vs_5_0",                   // Shader model
+      0,                          // Shader compile options
+      0,                          // Effect compile options
+      &vertexShader,              // Double pointer to ID3DBlob
+      &errorBlob);                // Pointer to error message in a blob
+
+  D3DCompileFromFile(
+      L"data/shaders/basic.hlsl", // HLSL file to compile
+      nullptr,                    // Optional defines
+      nullptr,                    // Optional include handler
+      "PSMain",                   // Entry point function in HLSL file
+      "ps_5_0",                   // Shader model
+      0,                          // Shader compile options
+      0,                          // Effect compile options
+      &pixelShader,               // Double pointer to ID3DBlob
+      &errorBlob);                // Pointer to error message in a blob
+
+  D3D12_INPUT_ELEMENT_DESC inputElementDescs[] = {
+    {"POSITION", 0,    DXGI_FORMAT_R32G32B32_FLOAT, 0,  0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+    {   "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
+  };
+
+  psoDesc.InputLayout                     = { inputElementDescs, _countof(inputElementDescs) };
+  psoDesc.pRootSignature                  = root_signature;
+  psoDesc.RasterizerState                 = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+  psoDesc.BlendState                      = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+  psoDesc.DepthStencilState.DepthEnable   = false;
+  psoDesc.DepthStencilState.StencilEnable = false;
+  psoDesc.SampleMask                      = UINT_MAX;
+  psoDesc.PrimitiveTopologyType           = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+  psoDesc.NumRenderTargets                = 1;
+  psoDesc.RTVFormats[0]                   = DXGI_FORMAT_R8G8B8A8_UNORM;
+  psoDesc.SampleDesc.Count                = 1;
+  psoDesc.VS                              = { vertexShader->GetBufferPointer(), vertexShader->GetBufferSize() };
+  psoDesc.PS                              = { pixelShader->GetBufferPointer(), pixelShader->GetBufferSize() };
+
+  ID3D12PipelineState* pso;
+  g_pd3dDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pso));
+
+  // ---
+
   // Main loop
   bool done = false;
   while (!done) {
@@ -182,7 +297,25 @@ int main(int, char**) {
         g_mainRenderTargetDescriptor[backBufferIdx], clear_color_with_alpha, 0, nullptr);
     g_pd3dCommandList->OMSetRenderTargets(1, &g_mainRenderTargetDescriptor[backBufferIdx], FALSE, nullptr);
     g_pd3dCommandList->SetDescriptorHeaps(1, &g_pd3dSrvDescHeap);
+
+    // ---
+
+    // Right now we're crashing here...
+
+    D3D12_VERTEX_BUFFER_VIEW vertexBufferView = {};
+    vertexBufferView.BufferLocation           = vertexBuffer->GetGPUVirtualAddress();
+    vertexBufferView.StrideInBytes            = sizeof(VertexData);
+    vertexBufferView.SizeInBytes              = sizeof(vertex_data);
+
+    g_pd3dCommandList->SetPipelineState(pso);
+    g_pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    g_pd3dCommandList->IASetVertexBuffers(0, 1, &vertexBufferView);
+    g_pd3dCommandList->DrawInstanced(3, 1, 0, 0);
+
+    // ---
+
     ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), g_pd3dCommandList);
+
     barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
     barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_PRESENT;
     g_pd3dCommandList->ResourceBarrier(1, &barrier);

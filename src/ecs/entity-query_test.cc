@@ -1,9 +1,8 @@
 #include "../test/test.h"
 
-#include "archetype.hh"
-#include "component-registry.hh"
-#include "entity-manager.hh"
 #include "entity-query.hh"
+
+#include "world.hh"
 
 using namespace game;
 
@@ -45,6 +44,9 @@ int main(int argc, char* argv[]) {
 
     Archetype* archetype1 = world.EntityManager().CreateArchetype({ GetComponentTypeId<Position>() });
     Archetype* archetype2 = world.EntityManager().CreateArchetype({ GetComponentTypeId<Rotation>() });
+
+    archetype1->label_ = "PositionArchetype";
+    archetype2->label_ = "RotationArchetype";
 
     Entity a = world.EntityManager().CreateEntity(archetype1);
     Entity b = world.EntityManager().CreateEntity(archetype2);

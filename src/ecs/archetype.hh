@@ -36,47 +36,31 @@ struct ArchetypeChunkData {
 
   // ---
 
-  i32 Len() const {
-    return len_;
-  }
+  i32 Len() const { return len_; }
 
-  i32 Cap() const {
-    return cap_;
-  }
+  i32 Cap() const { return cap_; }
 
   void Add(Chunk* chunk, u32 change_version);
 
   // ---
 
-  Chunk** ChunkPtrArray() const {
-    return (Chunk**)ptr_;
-  }
+  Chunk** ChunkPtrArray() const { return (Chunk**)ptr_; }
 
-  i32 _ChunkPtrArraySize() const {
-    return i32(sizeof(Chunk**)) * cap_;
-  }
+  i32 _ChunkPtrArraySize() const { return i32(sizeof(Chunk**)) * cap_; }
 
   // Each component type has it's own change version in the chunk metadata
-  u32* ChangeVersionArray() const {
-    return (u32*)((byte*)ptr_ + _ChunkPtrArraySize());
-  }
+  u32* ChangeVersionArray() const { return (u32*)((byte*)ptr_ + _ChunkPtrArraySize()); }
 
   // Find the change version array for a sequence of chunks based on the component type index for the archetype
   u32* ChangeVersionArray(i32 archetype_component_type_index) const {
     return ChangeVersionArray() + archetype_component_type_index * cap_;
   }
 
-  i32 _ChangeVersionArraySize() const {
-    return 4 * component_count_ * cap_;
-  }
+  i32 _ChangeVersionArraySize() const { return 4 * component_count_ * cap_; }
 
-  i32* EntityCountArray() const {
-    return (i32*)((byte*)ptr_ + _ChunkPtrArraySize() + _ChangeVersionArraySize());
-  }
+  i32* EntityCountArray() const { return (i32*)((byte*)ptr_ + _ChunkPtrArraySize() + _ChangeVersionArraySize()); }
 
-  i32 _EntityCountArraySize() const {
-    return 4 * cap_;
-  }
+  i32 _EntityCountArraySize() const { return 4 * cap_; }
 
   // ---
 
@@ -90,7 +74,7 @@ struct Archetype {
   ComponentTypeId*   types_;
   i32                types_len_;
   u16*               sizes_;                  // size of each component
-  i32*               offsets_;                // offsets to the beginning of each component array in each chunk
+  i32*               offsets_;                // offset to component data array in chunk
   i32                chunk_entity_capacity_;  // Maximum number of entities per chunk
   ArchetypeChunkData chunk_data_;             // chunks?
   List<Chunk*>       chunk_with_empty_slots_; // Chunk free list (chunks that have space)
@@ -99,9 +83,7 @@ struct Archetype {
   List<EntityQuery*> matching_queries_;
 
   // The type identity of an archetype is a sorted set of component types
-  Slice<const ComponentTypeId> TypeId() const {
-    return { types_, types_len_, types_len_ };
-  }
+  Slice<const ComponentTypeId> TypeId() const { return { types_, types_len_, types_len_ }; }
 
   void Destroy() {
     chunk_data_.Destroy();

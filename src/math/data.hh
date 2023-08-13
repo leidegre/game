@@ -14,76 +14,96 @@ const f32 PI      = 3.14159265359;
 const f32 TWO_PI  = 6.28318530718;
 const f32 HALF_PI = 1.57079632679;
 
-struct alignas(4) vec2 {
-  f32 v_[2];
+// ---
 
-  f32 x() const {
-    return v_[0];
-  }
-
-  f32 y() const {
-    return v_[1];
-  }
+struct alignas(4) vec3u {
+  u32 x;
+  u32 y;
+  u32 z;
 };
+
+inline vec3u operator^(const vec3u& a, const vec3u& b) {
+  return { a.x ^ b.x, a.y ^ b.y, a.z ^ b.z };
+}
+
+// ---
 
 struct alignas(4) vec3 {
-  f32 v_[3];
+  f32 x;
+  f32 y;
+  f32 z;
 
-  f32 x() const {
-    return v_[0];
-  }
-
-  f32 y() const {
-    return v_[1];
-  }
-
-  f32 z() const {
-    return v_[2];
-  }
+  vec3 yzx() const { return { y, z, x }; }
 };
 
+inline vec3 operator+(const vec3& a, const vec3& b) {
+  return { a.x + b.x, a.y + b.y, a.z + b.z };
+}
+
+inline vec3 operator-(const vec3& a, const vec3& b) {
+  return { a.x - b.x, a.y - b.y, a.z - b.z };
+}
+
+// scalar multiplication
 inline vec3 operator*(float s, const vec3& v) {
   vec3 tmp;
-  tmp.v_[0] = s * v.v_[0];
-  tmp.v_[1] = s * v.v_[1];
-  tmp.v_[2] = s * v.v_[2];
+  tmp.x = s * v.x;
+  tmp.y = s * v.y;
+  tmp.z = s * v.z;
   return tmp;
+}
+
+// componentwise multiplication
+inline vec3 operator*(const vec3& x, const vec3& y) {
+  return { x.x * y.x, x.y * y.y, x.z * y.z };
 }
 
 // 4-component vector of floating point values
 struct alignas(16) vec4 {
-  f32 v_[4];
+  f32 x;
+  f32 y;
+  f32 z;
+  f32 w;
 
-  f32 x() const {
-    return v_[0];
-  }
-
-  f32 y() const {
-    return v_[1];
-  }
-
-  f32 z() const {
-    return v_[2];
-  }
-
-  f32 w() const {
-    return v_[3];
-  }
+  vec3 yxw() const { return { y, x, w }; }
+  vec3 zwx() const { return { z, w, x }; }
+  vec3 wzy() const { return { w, z, y }; }
 };
+
+inline vec4 operator+(const vec4& a, const vec4& b) {
+  return { a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w };
+}
+
+// scalar multiplication
+inline vec4 operator*(float s, const vec4& a) {
+  return { s * a.x, s * a.y, s * a.z, s * a.w };
+}
+
+// componentwise multiplication
+inline vec4 operator*(const vec4& a, const vec4& b) {
+  return { a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w };
+}
 
 // ---
 // Swizzle
 // ---
 
-// Extend 2d-vector to { x, y, 0, 1 }
-inline vec4 xyzw(const vec2& v) {
-  return { v.x(), v.y(), 0, 1 };
+// Extend 3d-vector to { x, y, z, 1 }
+inline vec4 xyz1(const vec3& v) {
+  return { v.x, v.y, v.z, 1 };
 }
 
-// Extend 3d-vector to { x, y, z, 1 }
-inline vec4 xyzw(const vec3& v) {
-  return { v.x(), v.y(), v.z(), 1 };
+// Extend 3d-vector to { x, y, z, 0 }
+inline vec4 xyz0(const vec3& v) {
+  return { v.x, v.y, v.z, 1 };
 }
+
+// Shrink 4d-vector to { x, y, z }
+inline vec3 xyz(const vec4& v) {
+  return { v.x, v.y, v.z };
+}
+
+// ---
 
 // Quaternion
 struct alignas(16) quat {
@@ -98,78 +118,44 @@ struct alignas(16) quat {
     f32  cos_h = cosf(h);
     vec3 v     = sin_h * axis;
 
-    return { v.x(), v.y(), v.z(), cos_h };
+    return { v.x, v.y, v.z, cos_h };
   }
 
-  f32 v_[4];
+  vec4 v_;
 };
 
-// Each row of the matrix is continuous in memory (row-major).
-struct alignas(16) mat4 {
-  static const mat4& Identity() {
-    static const mat4 identity = {
-      1.0f, 0.0f, 0.0f, 0.0f, // row 0
-      0.0f, 1.0f, 0.0f, 0.0f, // row 1
-      0.0f, 0.0f, 1.0f, 0.0f, // row 2
-      0.0f, 0.0f, 0.0f, 1.0f, // row 3
+// Each column of the matrix is continuous in memory (column-major).
+struct alignas(4) mat3 {
+  static const mat3& Identity() {
+    static const mat3 identity = {
+      1.0f, 0.0f, 0.0f, // col 0
+      0.0f, 1.0f, 0.0f, // col 1
+      0.0f, 0.0f, 1.0f, // col 2
     };
     return identity;
   }
 
-  union {
-    f32  m_[4][4];
-    f32  a_[16];
-    vec4 v_[4];
-  };
+  vec3 c0; // column 0
+  vec3 c1; // column 1
+  vec3 c2; // column 2
+};
 
-  const vec4& Row(int i) const {
-    return this->v_[i];
+// Each column of the matrix is continuous in memory (column-major).
+struct alignas(64) mat4 {
+  static const mat4& Identity() {
+    static const mat4 identity = {
+      1.0f, 0.0f, 0.0f, 0.0f, // col 0
+      0.0f, 1.0f, 0.0f, 0.0f, // col 1
+      0.0f, 0.0f, 1.0f, 0.0f, // col 2
+      0.0f, 0.0f, 0.0f, 1.0f, // col 3
+    };
+    return identity;
   }
 
-  void SetRow(int i, const vec4& row) {
-    this->v_[i] = row;
-  }
-
-  vec4 Col(int j) const {
-    vec4 col;
-    col.v_[0] = a_[j];
-    col.v_[1] = a_[4 + j];
-    col.v_[2] = a_[8 + j];
-    col.v_[3] = a_[12 + j];
-    return col;
-  }
-
-  void SetCol(int j, const vec4& col) {
-    a_[j]      = col.v_[0];
-    a_[4 + j]  = col.v_[1];
-    a_[8 + j]  = col.v_[2];
-    a_[12 + j] = col.v_[3];
-  }
-
-  // ---
-
-  static void Translation(const vec3& xyz, mat4* t) {
-    t->SetRow(0, { 1, 0, 0, 0 });
-    t->SetRow(1, { 0, 1, 0, 0 });
-    t->SetRow(2, { 0, 0, 1, 0 });
-    t->SetRow(3, xyzw(xyz));
-  }
-
-  // Rotation matrix from quaternion
-  static void Rotation(const quat& q, mat4* t) {
-    t->SetRow(0, { 1, 0, 0, 0 });
-    t->SetRow(1, { 0, 1, 0, 0 });
-    t->SetRow(2, { 0, 0, 1, 0 });
-    t->SetRow(3, { 0, 0, 0, 1 });
-  }
-
-  // Uniform scale
-  static void Scale(f32 s, mat4* t) {
-    t->SetRow(0, { s, 0, 0, 0 });
-    t->SetRow(1, { 0, s, 0, 0 });
-    t->SetRow(2, { 0, 0, s, 0 });
-    t->SetRow(3, { 0, 0, 0, 1 });
-  }
+  vec4 c0; // column 0
+  vec4 c1; // column 1
+  vec4 c2; // column 2
+  vec4 c3; // column 3
 };
 
 // ---
@@ -180,24 +166,40 @@ union FloatInt {
   i32 v_;
 };
 
+// Bitwise conversion of 32-bit floating point number to signed 32-bit integer
 inline i32 ToInt(f32 f) {
   FloatInt u;
   u.f_ = f;
   return u.v_;
 }
 
+// Bitwise conversion of 32-bit floating point number to unsigned 32-bit integer
 inline u32 ToUInt(f32 f) {
   return (u32)ToInt(f);
 }
 
+// Bitwise conversion of signed 32-bit integer to 32-bit floating point number
 inline f32 ToFloat(i32 v) {
   FloatInt u;
   u.v_ = v;
   return u.f_;
 }
 
+// Bitwise conversion of unsigned 32-bit integer to 32-bit floating point number
 inline f32 ToFloat(u32 v) {
   return ToFloat((i32)v);
+}
+
+// ---
+
+// Bitwise conversion
+inline vec3u ToUInt(const vec3& v) {
+  return { ToUInt(v.x), ToUInt(v.y), ToUInt(v.z) };
+}
+
+// Bitwise conversion
+inline vec3 ToFloat(const vec3u& v) {
+  return { ToFloat(v.x), ToFloat(v.y), ToFloat(v.z) };
 }
 }; // namespace bitwise
 } // namespace game

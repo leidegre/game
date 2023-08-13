@@ -4,33 +4,12 @@
 
 #include "archetype.hh"
 #include "component-registry.hh" // aka ecs/types.hh
+#include "entity-query.hh"
 
 namespace game {
-struct Chunk;
 struct World;
-struct ComponentRegistry;
-struct ComponentDataAccess;
 struct ChunkAllocator;
-struct EntityQuery;
 struct EntityManager;
-
-struct World {
-  ComponentRegistry* type_registry_;
-  ChunkAllocator*    chunk_allocator_;
-  EntityManager*     entity_manager_;
-
-  void Create(Slice<const TypeInfo> components);
-
-  void Destroy();
-
-  // ---
-
-  EntityManager& EntityManager() {
-    // Note sure about this... we're just trying to minimize the number of pointers really
-    // Access good we can check stuff here and put breakpoints, dot notation over arrow notation?
-    return *entity_manager_;
-  }
-};
 
 // Note that the meaning of this will depend on the value of chunk
 // When chunk is null the index is absolute (entity index)
@@ -88,9 +67,7 @@ struct EntityManager {
 
   void DestroyEntities(Entity* entities, i32 count);
 
-  void DestroyEntity(Entity entity) {
-    DestroyEntities(&entity, 1);
-  }
+  void DestroyEntity(Entity entity) { DestroyEntities(&entity, 1); }
 
   // // Copies an existing entity and creates a new entity from that copy.
   // void Instantiate();

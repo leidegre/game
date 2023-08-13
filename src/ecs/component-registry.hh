@@ -1,24 +1,8 @@
 #pragma once
 
-#include "component.hh"
+#include "type-system.hh"
 
 namespace game {
-struct TypeInfo {
-  ComponentTypeId type_id_;
-  u16             size_;
-  u16             alignment_;
-  const char*     name_;
-
-  // all components that store entities must store them in a single `Entity array[]`
-
-  int entity_offset_count_;       // for components that store entities?
-  int entity_offset_start_index_; // for components that store entities?
-  int buffer_cap_;                // for buffer components
-  int max_chunk_cap_;
-  // int memory_ordering_ // ???
-  // int stable_type_hash_ // ??? probably to detect type change at runtime
-};
-
 struct ComponentRegistry {
   Slice<const TypeInfo> components_;
 

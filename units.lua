@@ -10,12 +10,27 @@ local package_deps = conv.flatten_package_deps {
         "xxhash"
     },
     ["libecs"] = {
-        "libcommon"
+        "libcommon",
+        "libcomponents"
     },
     ["game"] = {
         "libcommon",
         "libecs",
+        "imgui",
+        "dx12ext"
+    },
+    ["game2"] = {
+        "libcommon",
+        "libecs",
+        "librenderer-dx12",
         "imgui"
+    },
+    ["librenderer-dx12"] = {
+        "libcommon",
+        "dx12ext"
+    },
+    ["dx12"] = {
+        "dx12ext"
     }
 }
 

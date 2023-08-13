@@ -97,3 +97,19 @@ ExternalLibrary {
         }
     }
 }
+
+ExternalLibrary {
+    Name = "dx12ext",
+    Includes = {},
+    Propagate = {
+        Includes = {
+            "include/directx"
+        },
+        Libs = {
+            "d3d12.lib",
+            "dxgi.lib",
+            "dxguid.lib",
+            "D3DCompiler.lib"
+        }
+    }
+}

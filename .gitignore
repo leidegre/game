@@ -5,4 +5,8 @@ t2-output
 
 vendor
 
+# Dear ImGui
 imgui.ini
+
+# RenderDoc
+*.cap

@@ -3,6 +3,7 @@
 #include "archetype.hh"
 #include "chunk.hh"
 #include "entity-query.hh"
+#include "world.hh"
 
 #include "../common/mem.hh"
 
@@ -316,8 +317,8 @@ void EntityManager::DestroyEntities(Entity* entities, i32 count) {
     Entity* chunk_entities = chunk->EntityArray() + s.index_;
 
     // Why are we going backwards through the range?
-    for (i32 i = s.count_ - 1; i >= 0; i--) {
-      i32 entity_index = chunk_entities[i].index_;
+    for (i32 j = s.count_ - 1; j >= 0; j--) {
+      i32 entity_index = chunk_entities[j].index_;
 
       versions[entity_index]++;
 

@@ -1,8 +1,8 @@
 #include "../test/test.h"
 
-#include "archetype.hh"
-#include "component-registry.hh"
 #include "entity-manager.hh"
+
+#include "world.hh"
 
 using namespace game;
 

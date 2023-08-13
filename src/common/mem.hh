@@ -52,10 +52,6 @@ template <typename T> Slice<T> Insert(Slice<T> sorted, T value) {
 };
 
 namespace slice {
-// Create a slice from an array
-template <typename T, i32 Length> constexpr Slice<T> FromArray(T (&array)[Length]) {
-  return Slice<T>{ array, Length, Length };
-};
 // Create read only slice from initializer_list
 // Note that this does not extend the lifetime of the initializer_list it is just a wrapper for the initializer_list interface; use responsibly
 // WARNING: This is not legal slice::FromInitializer({1, 2, 3})
@@ -63,7 +59,6 @@ template <typename T> constexpr Slice<const T> FromInitializer(std::initializer_
   i32 length = (i32)initializer_list.size();
   return { initializer_list.begin(), length, length };
 };
-
 } // namespace slice
 
 enum Allocator {
@@ -100,6 +95,8 @@ inline i32 MemCeilPow2(i32 x) {
 inline i32 MemAlign(i32 size, i32 alignment) {
   return (size + (alignment - 1)) & ~(alignment - 1);
 }
+
+// MemAlloc[Array][ZeroInit]
 
 // Allocate uninitialized memory
 void* MemAlloc(Allocator allocator, i32 size, i32 alignment);

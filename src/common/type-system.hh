@@ -28,18 +28,12 @@ template <typename T> struct Slice {
   i32 cap_;
 
   // Length of slice in number of elements.
-  i32 Len() const {
-    return len_;
-  }
+  i32 Len() const { return len_; }
 
   // Size of slice in bytes (the total size of number of elements in bytes).
-  i32 ByteLen() const {
-    return (i32)sizeof(T) * len_;
-  }
+  i32 ByteLen() const { return (i32)sizeof(T) * len_; }
 
-  i32 Cap() const {
-    return cap_;
-  }
+  i32 Cap() const { return cap_; }
 
   T& operator[](i32 index) const {
     assert((0 <= index) & (index < len_));
@@ -47,18 +41,19 @@ template <typename T> struct Slice {
   }
 
   // Make writable slice into a read-only slice
-  Slice<const T> Const() const {
-    return { ptr_, len_, cap_ };
-  }
+  Slice<const T> Const() const { return { ptr_, len_, cap_ }; }
 
   // ranged based for loop support
 
-  T* begin() const {
-    return ptr_;
-  }
+  T* begin() const { return ptr_; }
 
-  T* end() const {
-    return ptr_ + len_;
-  }
+  T* end() const { return ptr_ + len_; }
 };
+
+namespace slice {
+// Create a slice from an array
+template <typename T, i32 Length> constexpr Slice<T> FromArray(T (&array)[Length]) {
+  return Slice<T>{ array, Length, Length };
+};
+} // namespace slice
 } // namespace game

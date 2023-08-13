@@ -52,9 +52,14 @@ bool MergeJoinAny(const ComponentTypeId* query, i32 query_len, const ComponentTy
 
 bool EntityQuery::IsMatch(Archetype* archetype) {
   bool all = MergeJoinAll(all_, all_len_, archetype->types_, archetype->types_len_);
-  bool any = MergeJoinAny(any_, any_len_, archetype->types_, archetype->types_len_);
-  // todo: exclude
-  return all && any;
+  if (all) {
+    if (0 < any_len_) {
+      bool any = MergeJoinAny(any_, any_len_, archetype->types_, archetype->types_len_);
+      return any;
+    }
+    return true;
+  }
+  return false;
 }
 
 u32 EntityQuery::HashCode() {
