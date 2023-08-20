@@ -8,7 +8,7 @@ struct World {
   ChunkAllocator*    chunk_allocator_;
   EntityManager*     entity_manager_;
   List<System*>      system_list_;
-  List<SystemState>  system_state_;
+  List<SystemState*> system_state_;
 
   void Create(Slice<const TypeInfo> components);
 
@@ -24,11 +24,13 @@ struct World {
 
   // ---
 
-  void Register(System* system) {
+  SystemState& Register(System* system) {
     system_list_.Add(system);
-    SystemState state{};
-    state.entity_manger_ = entity_manager_;
-    system_state_.Add(state);
+
+    SystemState* state    = MemAllocZeroInit<SystemState>(MEM_ALLOC_HEAP);
+    state->entity_manger_ = entity_manager_;
+    system_state_.Add(state); // if we do this then the memory can become invalid if the list is resized
+    return *state;
   }
 
   void Update();

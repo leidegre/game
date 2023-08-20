@@ -19,7 +19,7 @@ template <typename T> struct ComponentDataReaderWriter {
   ComponentDataReaderWriter() { type_id_ = GetComponentTypeId<T>(); }
 };
 
-// A slice of a chunk for processing in a job kernel
+// A slice of a chunk for processing in a job kernel. ChunkDataView?
 struct SystemChunk {
   Chunk* chunk_;
   int    batch_begin_index_;
@@ -27,10 +27,10 @@ struct SystemChunk {
 
   int Len() const { return batch_end_index_ - batch_begin_index_; }
 
-  void* _GetArray(const ComponentTypeId& component_type_id) const {
-    Archetype*       archetype            = chunk_->Archetype();
-    ComponentTypeId* archetype_types      = archetype->types_;
-    i32              archetype_types_len_ = archetype->types_len_;
+  void* _GetArray(ComponentTypeId component_type_id) const {
+    Archetype&       archetype            = chunk_->Archetype();
+    ComponentTypeId* archetype_types      = archetype.types_;
+    i32              archetype_types_len_ = archetype.types_len_;
 
     // Find index of component type in archetype
     int i = 0;
@@ -43,8 +43,8 @@ struct SystemChunk {
       return nullptr; // when using any queries, it is possible to not have any data for a particular component type
     }
 
-    i32 offset = archetype->offsets_[i];
-    i32 size   = archetype->sizes_[i];
+    i32 offset = archetype.offsets_[i];
+    i32 size   = archetype.sizes_[i];
 
     // if this is a write we unconditionally set the global system version of the type in the chunk
     // archetype->chunk_data_.ChangeVersionsPtr()[i] = component.global_system_version_;
@@ -68,6 +68,7 @@ struct SystemChunk {
 
 // ---
 
+// put the system state in the base class?
 struct SystemState {
   enum Flags : u32 {
     FLAG_CREATED   = 1 << 0,

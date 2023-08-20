@@ -65,13 +65,13 @@ enum Allocator {
   // Memory came from somewhere else. Cannot realloc or free this memory.
   MEM_ALLOC_NONE = 0,
 
-  // Memory allocated from heap. You must eventually free this memory. Default for zero initialized collections.
+  // Memory allocated from heap. You must eventually free this memory.
   MEM_ALLOC_HEAP,
 
-  // Frame memory (TLS linear allocator). Memory should return to pool within the frame. You should free this memory as soon as possible but if you don't you won't leak memory.
+  // Temp memory. Temp memory is very short lived. Think of it as memory allocated on the stack. You can free temp memory but it doesn't leak if you don't.
   MEM_ALLOC_TEMP,
 
-  // Job memory (threadsafe linear allocator). Memory will return to pool after 4 frames. You should free this memory as soon as possible but if you don't you won't leak memory.
+  // Job memory. Job memory has longer duration than temp memory but it is not meant to stick around for more than a few frames.
   MEM_ALLOC_TEMP_JOB,
 };
 
@@ -92,20 +92,17 @@ inline i32 MemCeilPow2(i32 x) {
   return x + 1;
 }
 
-inline i32 MemAlign(i32 size, i32 alignment) {
+inline size_t MemAlign(size_t size, size_t alignment) {
   return (size + (alignment - 1)) & ~(alignment - 1);
 }
+
+// todo: return byte* instead of void* more useful cast is required anyway
+// todo: maybe use size_t all the way... i32 is a bit clunky and overloads is a bit annoying
 
 // MemAlloc[Array][ZeroInit]
 
 // Allocate uninitialized memory
-void* MemAlloc(Allocator allocator, i32 size, i32 alignment);
-
-// Allocate uninitialized memory
-inline void* MemAlloc(Allocator allocator, size_t size, size_t alignment) {
-  // todo: check size and alignment
-  return MemAlloc(allocator, i32(size), i32(alignment));
-}
+byte* MemAlloc(Allocator allocator, size_t size, size_t alignment);
 
 // Allocate uninitialized memory
 template <typename T> T* MemAlloc(Allocator allocator, size_t size = sizeof(T), size_t alignment = alignof(T)) {
@@ -129,9 +126,16 @@ template <typename T> inline Slice<T> MemSlice(Allocator allocator, i32 count, i
 }
 
 // Allocate zero initialized memory
+inline byte* MemAllocZeroInit(Allocator allocator, i32 size, i32 alignment) {
+  byte* ptr = MemAlloc(allocator, size, alignment);
+  memset(ptr, 0, size_t(size));
+  return ptr;
+}
+
+// Allocate zero initialized memory
 template <typename T> T* MemAllocZeroInit(Allocator allocator) {
   auto block = MemAlloc<T>(allocator);
-  memset(block, 0, sizeof(T));
+  memset(block, 0, sizeof(T)); // will generate warning if T is virtual
   return (T*)block;
 }
 
@@ -141,6 +145,9 @@ template <typename T> T* MemAllocZeroInitArray(Allocator allocator, i32 n) {
   memset(block, 0, size_t(n) * sizeof(T));
   return (T*)block;
 }
+
+// Reset temporary memory allocations.
+void MemResetTemp();
 
 // Copy some number of bytes (size) from src to dst.
 inline void* MemCopy(void* dst, const void* src, i32 size) {

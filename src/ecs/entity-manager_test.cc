@@ -63,7 +63,7 @@ int main(int argc, char* argv[]) {
 
     Entity entities[1];
 
-    world.entity_manager_->CreateEntity(archetype, entities, 1);
+    world.entity_manager_->CreateEntities(archetype, entities, 1);
 
     auto chunk = archetype->chunk_data_.ChunkPtrArray()[0];
 

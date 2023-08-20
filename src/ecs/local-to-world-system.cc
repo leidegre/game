@@ -2,6 +2,8 @@
 
 #include "../components/components.hh"
 
+#include "../math/transform.hh"
+
 using namespace game;
 
 namespace {
@@ -13,6 +15,8 @@ struct TRS_LocalToWorldJobData {
 };
 
 void TRS_LocalToWorldJobKernel(TRS_LocalToWorldJobData& data, const SystemChunk& chunk) {
+  // todo: __restrict?
+
   const Translation* translation    = chunk.GetArray(data.translation_handle_); // optional
   const Rotation*    rotation       = chunk.GetArray(data.rotation_handle_);    // optional
   const Scale*       scale          = chunk.GetArray(data.scale_handle_);       // optional
@@ -22,6 +26,10 @@ void TRS_LocalToWorldJobKernel(TRS_LocalToWorldJobData& data, const SystemChunk&
     if (rotation != nullptr) {
       if (scale != nullptr) {
         // TRS
+        for (i32 i = 0; i < chunk.Len(); i++) {
+          local_to_world[i].value_ = math::TRS(
+              translation[i].value_, rotation[i].value_, { scale[i].value_, scale[i].value_, scale[i].value_ });
+        }
       } else {
         // TR
       }
@@ -31,6 +39,9 @@ void TRS_LocalToWorldJobKernel(TRS_LocalToWorldJobData& data, const SystemChunk&
         // TS
       } else {
         // T
+        for (i32 i = 0; i < chunk.Len(); i++) {
+          local_to_world[i].value_ = math::Translation(translation[i].value_);
+        }
       }
     }
   } else {
@@ -45,6 +56,9 @@ void TRS_LocalToWorldJobKernel(TRS_LocalToWorldJobData& data, const SystemChunk&
       // Without rotation
       if (scale != nullptr) {
         // S
+        for (i32 i = 0; i < chunk.Len(); i++) {
+          local_to_world[i].value_ = math::ScaleUniform(scale[i].value_);
+        }
       } else {
         // Identity
         for (i32 i = 0; i < chunk.Len(); i++) {

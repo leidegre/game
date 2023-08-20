@@ -3,6 +3,7 @@
 #include "archetype.hh"
 #include "chunk.hh"
 #include "entity-query.hh"
+#include "system.hh" // SystemChunk...
 #include "world.hh"
 
 #include "../common/mem.hh"
@@ -165,7 +166,7 @@ Archetype* EntityManager::CreateArchetype(Slice<const ComponentTypeId> unsorted_
   return new_archetype;
 }
 
-void EntityManager::CreateEntity(Archetype* archetype, Entity* entities, i32 count) {
+void EntityManager::CreateEntities(Archetype* archetype, Entity* entities, i32 count) {
   // ...
 
   for (; 0 < count;) {
@@ -336,6 +337,39 @@ void EntityManager::DestroyEntities(Entity* entities, i32 count) {
     i += s.count_;
   }
 }
+
+// ---
+
+// Resolve entity. If the entity is valid the return value is the entity index otherwise invalid index value (-1)
+i32 ResolveEntity(EntityManager* m, Entity entity) {
+  return m->version_by_entity_[entity.index_] == entity.version_ ? entity.index_ : -1;
+}
+
+void EntityManager::_SetComponentData(Entity entity, ComponentTypeId type_id, const void* data) {
+  i32 entity_index = ResolveEntity(this, entity);
+  if (entity_index == -1) {
+    return; // this is not an error but we might want to log this in debug?
+  }
+
+  _ChunkEntityIndex chunk_index = entity_chunk_index_by_entity_[entity_index];
+
+  Archetype& archetype = chunk_index.chunk_->Archetype();
+
+  SystemChunk system_chunk = { chunk_index.chunk_,
+                               chunk_index.index_,
+                               chunk_index.chunk_->EntityCount() - chunk_index.index_ };
+
+  void* dst = system_chunk._GetArray(type_id);
+  if (dst == nullptr) {
+    assert(
+        false
+        && "archetype doesn't have component type"); // crash or structural change? (need to use something else than assert here)
+  }
+
+  memcpy(dst, data, world_->type_registry_->components_[type_id.Index()].size_);
+}
+
+// ---
 
 void EntityManager::_SetCapacity(i32 new_capacity) {
   auto old_capacity = entity_capacity_;

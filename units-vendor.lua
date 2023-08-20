@@ -113,3 +113,13 @@ ExternalLibrary {
         }
     }
 }
+
+ExternalLibrary {
+    Name = "dxmath",
+    Includes = {},
+    Propagate = {
+        Includes = {
+            "vendor/DirectXMath-dec2022/Inc"
+        }
+    }
+}

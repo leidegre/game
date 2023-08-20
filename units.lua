@@ -13,6 +13,14 @@ local package_deps = conv.flatten_package_deps {
         "libcommon",
         "libcomponents"
     },
+    ["libmath"] = {
+        "dxmath"
+    },
+    ["libloader"] = {
+        "libcommon",
+        "png",
+        "zlib"
+    },
     ["game"] = {
         "libcommon",
         "libecs",
@@ -22,11 +30,12 @@ local package_deps = conv.flatten_package_deps {
     ["game2"] = {
         "libcommon",
         "libecs",
-        "librenderer-dx12",
-        "imgui"
+        "librenderer-dx12"
     },
     ["librenderer-dx12"] = {
         "libcommon",
+        "libloader",
+        "imgui",
         "dx12ext"
     },
     ["dx12"] = {

@@ -70,6 +70,7 @@ struct ArchetypeChunkData {
   }
 };
 
+// as long as it is no virtual member it has a standard layout and we could make these non-copyable because it is a mistake to copy these...
 struct Archetype {
   ComponentTypeId*   types_;
   i32                types_len_;
@@ -84,6 +85,18 @@ struct Archetype {
 
   // The type identity of an archetype is a sorted set of component types
   Slice<const ComponentTypeId> TypeId() const { return { types_, types_len_, types_len_ }; }
+
+  // // Find the index of the component type within this archetype. If the component type is not present the return value is -1
+  // i32 _FindComponentTypeIndex(ComponentTypeId type_id) const {
+  //   ComponentTypeId* types     = types_;
+  //   i32              types_len = types_len_;
+  //   for (i32 i = 0; i < types_len; i++) {
+  //     if (types[i] == type_id) {
+  //       return i;
+  //     }
+  //   }
+  //   return -1;
+  // }
 
   void Destroy() {
     chunk_data_.Destroy();

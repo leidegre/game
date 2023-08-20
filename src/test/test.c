@@ -282,7 +282,7 @@ int test_benchmark_eval(test_benchmark* bench) {
 
 void test_report_failure() {
   assert(g_test_context.curr_);
-  fprintf(stderr, "%s failed!\n", g_test_context.curr_->name_);
+  fprintf(stderr, "\n%s failed!\n", g_test_context.curr_->name_);
   g_test_context.curr_->status_ = TEST_STATUS_FAIL; // test failed
   g_test_context.curr_          = NULL;
 }

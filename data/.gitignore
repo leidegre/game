@@ -1,0 +1,8 @@
+# until we know what to do with data files we ignore most of it
+
+*.blend
+*.blend1
+*.kra
+*.png
+*.dae
+*.usdc

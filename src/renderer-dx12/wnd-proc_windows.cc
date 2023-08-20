@@ -1,11 +1,17 @@
 #include "renderer.hh"
 #include "renderer.inl"
 
+#include "imgui.h"
+#include "imgui_impl_win32.h"
+
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
 using namespace game;
 
 LRESULT WINAPI game::MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-  // if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
-  //   return true;
+  if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam)) {
+    return true;
+  }
 
   switch (msg) {
   case WM_SIZE:

@@ -4,24 +4,40 @@
 
 using namespace game;
 
-void* game::MemAlloc(Allocator allocator, i32 size, i32 alignment) {
+// for now having this here is fine but we may need to grow it and introduce a MemInit/MemShutdown
+static byte s_temp[1024 * 1024];
+static i32  s_temp_begin;
+
+byte* game::MemAlloc(Allocator allocator, size_t size, size_t alignment) {
   switch (allocator) {
   case MEM_ALLOC_NONE:
-    assert(false && "unsupported allocator");
+    assert(false && "MEM_ALLOC_NONE cannot be used with MemAlloc");
+    abort();
     return nullptr;
+
   case MEM_ALLOC_HEAP: {
+    byte* block;
 // The CRT debug heap does not support aligned malloc with type information
 // i.e. there's no way for us to allocate the _CLIENT_BLOCK via _aligned_malloc
 #if _WIN32
-    auto block = _aligned_malloc(size_t(size), size_t(alignment));
+    block = (byte*)_aligned_malloc(size, alignment);
 #elif __clang__
-    auto block = aligned_alloc(size_t(alignment), size_t(MemAlign(size, alignment))); // swapped...
+    block = (byte*)aligned_alloc(alignment, MemAlign(size, alignment)); // swapped...
 #else
 #error Don't know how to allocate aligned memory
 #endif
     assert(block && "cannot allocate memory from heap");
     return block;
   }
+
+  case MEM_ALLOC_TEMP: {
+    i32 aligned = MemAlign(s_temp_begin, alignment);
+    assert(aligned + size <= sizeof(s_temp) && "MEM_ALLOC_TEMP: out of memory");
+    byte* ptr    = &s_temp[aligned];
+    s_temp_begin = aligned + size;
+    return ptr;
+  }
+
   default:
     assert(false && "unknown allocator"); // checked or not...
     abort();
@@ -29,11 +45,16 @@ void* game::MemAlloc(Allocator allocator, i32 size, i32 alignment) {
   }
 }
 
+void game::MemResetTemp() {
+  s_temp_begin = 0;
+}
+
 void game::MemFree(Allocator allocator, void* block) {
   switch (allocator) {
   case MEM_ALLOC_NONE: {
     break;
   }
+
   case MEM_ALLOC_HEAP: {
 #if _WIN32
     _aligned_free(block);
@@ -44,6 +65,11 @@ void game::MemFree(Allocator allocator, void* block) {
 #endif
     break;
   }
+
+  case MEM_ALLOC_TEMP: {
+    break; // freeing temp memory does nothing, use MemResetTemp to reset temporary memory
+  }
+
   default: {
     assert(false && "unknown allocator");
     abort();

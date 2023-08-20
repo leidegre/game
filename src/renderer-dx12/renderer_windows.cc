@@ -1,7 +1,13 @@
+#include "imgui.h"
+#include "imgui_impl_dx12.h"
+#include "imgui_impl_win32.h"
+
 #include "renderer.hh"
 #include "renderer.inl"
 
 #include "../common/mem.hh"
+
+#include "../loader/tex-loader.hh"
 
 using namespace game;
 
@@ -23,9 +29,9 @@ struct Logger {
   void LogWarning(const char* message) { fprintf(stderr, "%s\n", message); }
 };
 
-// ---
-
 Logger g_dx12_log = { GAME_LOG_CATEGORY_DX12 };
+
+// ---
 
 bool game::RenderInit(Renderer** renderer) {
   Renderer* r = MemAllocZeroInit<Renderer>(MEM_ALLOC_HEAP);
@@ -112,6 +118,7 @@ bool game::RenderInit(Renderer** renderer) {
   D3D12_DESCRIPTOR_HEAP_DESC cbv_desc_heap_desc = {};
   cbv_desc_heap_desc.Type                       = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
   cbv_desc_heap_desc.NumDescriptors             = 1;
+  cbv_desc_heap_desc.Flags                      = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
   err = r->dev_->CreateDescriptorHeap(&cbv_desc_heap_desc, IID_PPV_ARGS(&r->cbv_desc_heap_));
   if (FAILED(err)) {
     return false;
@@ -223,10 +230,140 @@ bool game::RenderInit(Renderer** renderer) {
 
   // ---
 
+  // load grid texture data
+
+  {
+    CD3DX12_HEAP_PROPERTIES tex_heap = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+
+    // https://learn.microsoft.com/en-us/windows/win32/api/dxgiformat/ne-dxgiformat-dxgi_format
+
+    TextureAsset tex1;
+    LoadTextureFromFile(MEM_ALLOC_HEAP, "data/textures/debug/xz-grid-1024.png", &tex1);
+
+    D3D12_RESOURCE_DESC tex1_desc = {};
+    tex1_desc.MipLevels           = 1;
+    tex1_desc.Format              = DXGI_FORMAT_R8G8B8A8_UNORM; // 32-bpp 4-channel
+    tex1_desc.Width               = 1024;
+    tex1_desc.Height              = 1024;
+    tex1_desc.Flags               = D3D12_RESOURCE_FLAG_NONE;
+    tex1_desc.DepthOrArraySize    = 1;
+    tex1_desc.SampleDesc.Count    = 1;
+    tex1_desc.SampleDesc.Quality  = 0;
+    tex1_desc.Dimension           = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+
+    err = r->dev_->CreateCommittedResource(
+        &tex_heap,
+        D3D12_HEAP_FLAG_NONE,
+        &tex1_desc,
+        D3D12_RESOURCE_STATE_COPY_DEST, // copy destination
+        nullptr,
+        IID_PPV_ARGS(&r->grid_xz_tex_));
+    if (FAILED(err)) {
+      return false;
+    }
+
+    UINT64 tex1_buffer_size;
+
+    r->dev_->GetCopyableFootprints(&tex1_desc, 0, 1, 0, nullptr, nullptr, nullptr, &tex1_buffer_size);
+
+    // this is like a staging area for the texture upload
+    ID3D12Resource*       tex_upload;
+    CD3DX12_RESOURCE_DESC tex_upload_buffer_desc = CD3DX12_RESOURCE_DESC::Buffer(tex1_buffer_size);
+
+    CD3DX12_HEAP_PROPERTIES tex_heap_upload = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+
+    err = r->dev_->CreateCommittedResource(
+        &tex_heap_upload,
+        D3D12_HEAP_FLAG_NONE,
+        &tex_upload_buffer_desc,
+        D3D12_RESOURCE_STATE_GENERIC_READ,
+        nullptr,
+        IID_PPV_ARGS(&tex_upload));
+    if (FAILED(err)) {
+      return false;
+    }
+
+    // Ideally we copy directly into this buffer.
+    void* tex_upload_ptr;
+    tex_upload->Map(0, nullptr, &tex_upload_ptr);
+    memcpy(tex_upload_ptr, tex1.tex_data_, tex1.tex_data_size_);
+    tex_upload->Unmap(0, nullptr);
+
+    ID3D12GraphicsCommandList& cmd_list = *r->cmd_list_;
+
+    D3D12_TEXTURE_COPY_LOCATION dest = {};
+    dest.pResource                   = r->grid_xz_tex_;
+    dest.Type                        = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+    dest.SubresourceIndex            = 0;
+
+    D3D12_TEXTURE_COPY_LOCATION src        = {};
+    src.pResource                          = tex_upload;
+    src.Type                               = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+    src.PlacedFootprint.Offset             = 0;
+    src.PlacedFootprint.Footprint.Format   = DXGI_FORMAT_R8G8B8A8_UNORM; // Your format here
+    src.PlacedFootprint.Footprint.Width    = tex1.tex_width_;
+    src.PlacedFootprint.Footprint.Height   = tex1.tex_height_;
+    src.PlacedFootprint.Footprint.Depth    = 1;
+    src.PlacedFootprint.Footprint.RowPitch = tex1.tex_width_ * 4; // Assuming a byte for each channel in RGBA
+
+    cmd_list.Reset(r->cmd_allocator_[0], nullptr);
+
+    cmd_list.CopyTextureRegion(&dest, 0, 0, 0, &src, nullptr);
+
+    CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+        r->grid_xz_tex_, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
+    cmd_list.ResourceBarrier(1, &barrier);
+
+    cmd_list.Close();
+
+    r->cmd_queue_->ExecuteCommandLists(1, (ID3D12CommandList**)&r->cmd_list_);
+
+    RenderFence(*r);
+
+    RenderWaitForCurr(*r);
+  }
+
+  // ---
+
   ::ShowWindow(r->wnd_, SW_SHOWDEFAULT);
   ::UpdateWindow(r->wnd_);
 
   // ---
+
+  // Setup Dear ImGui context
+  IMGUI_CHECKVERSION();
+  ImGui::CreateContext();
+  ImGuiIO& io = ImGui::GetIO();
+  (void)io;
+  io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
+  io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
+
+  ImGui::StyleColorsDark();
+
+  ImGui_ImplWin32_Init(r->wnd_);
+  ImGui_ImplDX12_Init(
+      r->dev_,
+      RENDERER_BACK_BUFFER_COUNT,
+      DXGI_FORMAT_R8G8B8A8_UNORM,
+      r->cbv_desc_heap_,
+      r->cbv_desc_heap_->GetCPUDescriptorHandleForHeapStart(),
+      r->cbv_desc_heap_->GetGPUDescriptorHandleForHeapStart());
+
+  // ---
+
+  r->view_eye_    = { 0, 0, -10 };
+  r->view_target_ = { 0, 0, 0 };
+  r->view_up_     = { 0, 1, 0 };
+
+  r->view_ = math::LookAtLH(r->view_eye_, r->view_target_, r->view_up_);
+
+  r->proj_fovy_   = HALF_PI; // 90 deg
+  r->proj_aspect_ = 1280.0f / 800.0f;
+  r->proj_near_   = 0.1f;
+  r->proj_far_    = 100.0f;
+
+  r->proj_ = math::PerspectiveFovLH(r->proj_fovy_, r->proj_aspect_, r->proj_near_, r->proj_far_);
 
   renderer[0] = r;
   return true;
@@ -241,11 +378,23 @@ bool game::RenderUpdateInput(Renderer& r) {
     if (msg.message == WM_QUIT) {
       return false;
     }
+    printf("%4x %8llx %8llx\n", msg.message, msg.lParam, msg.wParam);
+    switch (msg.message) {
+    case WM_KEYDOWN: {
+      if (msg.wParam == 'W') {
+        // add velocity in the camera forward direction
+      }
+      break;
+    }
+    case WM_KEYUP: {
+      break;
+    }
+    }
   }
   return true;
 }
 
-bool game::RenderUpdateFrame(Renderer& r) {
+bool game::RenderFrameBegin(Renderer& r) {
   DWORD  wait_for_n = 1;
   HANDLE wait_for[] = {
     r.swap_chain_waitable_obj_, // This is for preventing the CPU from getting too far ahead
@@ -269,13 +418,13 @@ bool game::RenderUpdateFrame(Renderer& r) {
 
   // ---
 
-  const UINT bbi = r.swap_chain_->GetCurrentBackBufferIndex(); // back buffer index
-
   ID3D12CommandAllocator* cmd_allocator = r.cmd_allocator_[frame_index];
   cmd_allocator->Reset();
 
   ID3D12GraphicsCommandList* cmd_list = r.cmd_list_;
   cmd_list->Reset(cmd_allocator, nullptr);
+
+  const UINT bbi = r.swap_chain_->GetCurrentBackBufferIndex(); // back buffer index
 
   D3D12_RESOURCE_BARRIER barrier = {}; // RTV transition barrier
   barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -293,17 +442,47 @@ bool game::RenderUpdateFrame(Renderer& r) {
   CD3DX12_RECT scissor_rect(0, 0, 1280, 800);
   cmd_list->RSSetScissorRects(1, &scissor_rect);
 
-  float f = 0.5f * sinf(2 * 3.1415926535897932384626433f * ((r.frame_number_ % 144) / 144.0f));
+  // float f = 0.25f * sinf(2 * 3.1415926535897932384626433f * ((r.frame_number_ % 144) / 144.0f));
 
-  const float clear_color_with_alpha[4] = { f, f, f, 1.0 }; // dark gray
+  const float clear_color_with_alpha[4] = { 0.0f, 0.0f, 0.0f, 1.0f }; // dark gray
   cmd_list->ClearRenderTargetView(r.rtv_handle_[bbi], clear_color_with_alpha, 0, nullptr);
 
   cmd_list->OMSetRenderTargets(1, &r.rtv_handle_[bbi], FALSE, nullptr);
 
-  // insert actual drawing code here
-  // insert actual drawing code here
-  // insert actual drawing code here
+  // ---
 
+  ImGui_ImplDX12_NewFrame();
+  ImGui_ImplWin32_NewFrame();
+  ImGui::NewFrame();
+
+  static bool show_demo_window = true;
+  ImGui::ShowDemoWindow(&show_demo_window);
+
+  return true;
+}
+
+bool game::RenderFrameEnd(Renderer& r) {
+  const UINT32 frame_index = r.frame_number_ % RENDERER_BACK_BUFFER_COUNT;
+
+  ID3D12GraphicsCommandList* cmd_list = r.cmd_list_;
+
+  // ---
+
+  ImGui::Render(); // all ImGui commands must have been issued before this call
+
+  cmd_list->SetDescriptorHeaps(1, &r.cbv_desc_heap_);
+
+  ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), cmd_list);
+
+  // ---
+
+  const UINT bbi = r.swap_chain_->GetCurrentBackBufferIndex(); // back buffer index
+
+  D3D12_RESOURCE_BARRIER barrier = {}; // RTV transition barrier
+  barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+  barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+  barrier.Transition.pResource   = r.rtv_buffer_[bbi];
+  barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
   barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
   barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_PRESENT;
   cmd_list->ResourceBarrier(1, &barrier);
@@ -329,9 +508,7 @@ bool game::RenderUpdateFrame(Renderer& r) {
 
   // ---
 
-  UINT64 fence_value          = r.NextFenceValue();
-  r.fence_value_[frame_index] = fence_value;
-  r.cmd_queue_->Signal(r.fence_, fence_value);
+  RenderFence(r);
 
   // ---
 
@@ -340,7 +517,39 @@ bool game::RenderUpdateFrame(Renderer& r) {
   return true;
 }
 
-bool game::RenderShutdown(Renderer& r) {
+bool game::RenderUpdateFrame(Renderer& r) {
+  RenderFrameBegin(r);
+  RenderFrameEnd(r);
+  return true;
+}
+
+u64 game::RenderFence(Renderer& r) {
+  const UINT32 frame_index = r.frame_number_ % RENDERER_BACK_BUFFER_COUNT;
+
+  UINT64 fence_value          = r.NextFenceValue();
+  r.fence_value_[frame_index] = fence_value;
+  r.cmd_queue_->Signal(r.fence_, fence_value);
+
+  return fence_value;
+}
+
+bool game::RenderWaitForCurr(Renderer& r) {
+  // Wait for frame to complete
+
+  const UINT32 frame_index = r.frame_number_ % RENDERER_BACK_BUFFER_COUNT;
+
+  if (0 < r.fence_value_[frame_index]) {
+    UINT64 completed = r.fence_->GetCompletedValue();
+    if (completed < r.fence_value_[frame_index]) {
+      r.fence_->SetEventOnCompletion(r.fence_value_[frame_index], r.fence_event_);
+      ::WaitForSingleObject(r.fence_event_, INFINITE);
+    }
+  }
+
+  return true;
+}
+
+bool game::RenderWaitForPrev(Renderer& r) {
   // Wait for frame to complete
 
   const UINT32 frame_index = (r.frame_number_ - 1) % RENDERER_BACK_BUFFER_COUNT;
@@ -352,6 +561,20 @@ bool game::RenderShutdown(Renderer& r) {
       ::WaitForSingleObject(r.fence_event_, INFINITE);
     }
   }
+
+  return true;
+}
+
+bool game::RenderShutdown(Renderer& r) {
+  RenderWaitForPrev(r);
+
+  // ---
+
+  ImGui_ImplDX12_Shutdown();
+  ImGui_ImplWin32_Shutdown();
+  ImGui::DestroyContext();
+
+  // ---
 
   // Tear down DX12
 

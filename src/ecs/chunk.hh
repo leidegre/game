@@ -28,41 +28,25 @@ struct Chunk {
   ChunkHeader header_;
   byte        buffer_[1];
 
-  Archetype* Archetype() {
-    return header_.archetype_;
-  }
+  Archetype& Archetype() { return *header_.archetype_; }
 
   // The number of entities currently allocated in chunk
-  int EntityCount() {
-    return header_.len_;
-  }
+  int EntityCount() { return header_.len_; }
 
-  void AddEntityCount(int n) {
-    header_.len_ += n;
-  }
+  void AddEntityCount(int n) { header_.len_ += n; }
 
-  int EntityCapacity() {
-    return header_.cap_;
-  }
+  int EntityCapacity() { return header_.cap_; }
 
   // The index of this chunk in the chunk list
-  int ListIndex() {
-    return header_.list_index_;
-  }
+  int ListIndex() { return header_.list_index_; }
 
   // The index of this chunk in the free list
-  int FreeListIndex() {
-    return header_.free_list_index_;
-  }
+  int FreeListIndex() { return header_.free_list_index_; }
 
   // Gets a pointer to the beginning of the usable memory portion of the chunk
-  void* Buffer() {
-    return &buffer_[0];
-  }
+  void* Buffer() { return &buffer_[0]; }
 
-  Entity* EntityArray() {
-    return (Entity*)Buffer();
-  }
+  Entity* EntityArray() { return (Entity*)Buffer(); }
 };
 
 struct ChunkAllocator {

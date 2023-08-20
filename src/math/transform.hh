@@ -1,6 +1,8 @@
 #pragma once
 
-#include "math.hh"
+#include "data.hh"
+
+// https://learn.microsoft.com/en-us/windows/win32/dxtecharts/the-direct3d-transformation-pipeline
 
 namespace game {
 namespace math {
@@ -11,12 +13,35 @@ inline mat3 LookRotation(const vec3& forward, const vec3& up) {
   return m;
 }
 
-inline mat4 LookAt(const vec3& eye, const vec3& target, const vec3& up) {
-  mat3 rot = LookRotation(Normalize(target - eye), up);
+inline mat4 LookAtLH(const vec3& eye, const vec3& target, const vec3& up) {
+  vec3 look_towards = target - eye;
+
+  vec3 r2 = Normalize(look_towards);
+  vec3 r0 = Normalize(Cross(up, r2));
+  vec3 r1 = Cross(r2, r0);
+
+  f32 d0 = -Dot(r0, eye);
+  f32 d1 = -Dot(r1, eye);
+  f32 d2 = -Dot(r2, eye);
+
   mat4 m;
-  m.c0 = xyz0(rot.c0);
-  m.c1 = xyz0(rot.c1);
-  m.c2 = xyz0(rot.c2);
+  m.c0 = { r0.x, r0.y, r0.z, d0 };
+  m.c1 = { r1.x, r1.y, r1.z, d1 };
+  m.c2 = { r2.x, r2.y, r2.z, d2 };
+  m.c3 = { 0, 0, 0, 1 };
+
+  return m;
+}
+
+inline mat4 OrthographicLH(f32 width, f32 height, f32 near, f32 far) {
+  float f_range = 1.0f / (far - near);
+
+  mat4 m = {
+    {2.0f / width,          0.0f,     0.0,            0.0f},
+    {        0.0f, 2.0f / height,     0.0,            0.0f},
+    {        0.0f,          0.0f, f_range, -f_range * near},
+    {        0.0f,          0.0f,     0.0,            1.0f}
+  };
   return m;
 }
 
@@ -34,16 +59,40 @@ inline mat4 Ortho(f32 width, f32 height, f32 near, f32 far) {
   return m;
 }
 
-inline mat4 PerspectiveFov(f32 verticalFov, f32 aspect, f32 near, f32 far) {
-  f32 cotangent = 1.0f / tanf(verticalFov * 0.5f);
-  f32 rcpdz     = 1.0f / (near - far);
+inline mat4 PerspectiveFovLH(f32 vertical_fov, f32 aspect, f32 near, f32 far) {
+  // https://learn.microsoft.com/en-us/windows/win32/direct3d9/projection-transform
 
-  mat4 m = {
-    {cotangent / aspect,      0.0f,                 0.0f,                      0.0f},
-    {              0.0f, cotangent,                 0.0f,                      0.0f},
-    {              0.0f,      0.0f, (far + near) * rcpdz, 2.0f * near * far * rcpdz},
-    {              0.0f,      0.0f,                -1.0f,                      0.0f},
+  f32 sin_fovy = sinf(0.5f * vertical_fov);
+  f32 cos_fovy = cosf(0.5f * vertical_fov);
+  f32 h        = cos_fovy / sin_fovy; // cot(x) = cos(x)/sin(x) = 1/tan(x)
+  f32 w        = h / aspect;
+  f32 f_range  = far / (far - near); // Q
+
+  const vec4 m[4] = {
+    {   w, 0.0f,            0.0f, 0.0f},
+    {0.0f,    h,            0.0f, 0.0f},
+    {0.0f, 0.0f,         f_range, 1.0f},
+    {0.0f, 0.0f, -near * f_range, 0.0f},
   };
+
+  return mat4::FromRowData(m);
+}
+
+inline mat4 Translation(const vec3& translation) {
+  mat4 m;
+  m.c0 = { 1, 0, 0, 0 };
+  m.c1 = { 0, 1, 0, 0 };
+  m.c2 = { 0, 0, 1, 0 };
+  m.c3 = translation.xyz1();
+  return m;
+}
+
+inline mat4 ScaleUniform(f32 s) {
+  mat4 m;
+  m.c0 = { s, 0, 0, 0 };
+  m.c1 = { 0, s, 0, 0 };
+  m.c2 = { 0, 0, s, 0 };
+  m.c3 = { 0, 0, 0, 1 };
   return m;
 }
 
@@ -54,8 +103,13 @@ inline mat4 TRS(const vec3& translation, const quat& rotation, const vec3& scale
   m.c0 = xyz0(scale.x * r.c0);
   m.c1 = xyz0(scale.y * r.c1);
   m.c2 = xyz0(scale.z * r.c2);
-  m.c3 = xyz1(translation);
+  m.c3 = translation.xyz1();
   return m;
+}
+
+// matrix multiplication with column vector
+inline vec4 Transform(const mat4& a, const vec4& b) {
+  return a.c0 * b.x + a.c1 * b.y + a.c2 * b.z + a.c3 * b.w;
 }
 } // namespace math
 } // namespace game

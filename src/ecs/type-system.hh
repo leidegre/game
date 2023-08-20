@@ -10,10 +10,11 @@ namespace game {
 struct Entity {
   enum { COMPONENT_TYPE = 0 }; // builtin
 
-  i32 index_;
+  i32 index_; // -1 is invalid
   u32 version_;
 };
 
+// A named type of a global component type ID (absolute index). To access the index value use the Index() member function.
 struct ComponentTypeId {
   u32 v_;
 

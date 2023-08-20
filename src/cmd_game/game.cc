@@ -39,7 +39,7 @@ void game::GameInit(GameState* state) {
   state->archetypes_.entity_position_         = state->world_.entity_manager_->CreateArchetype(slice::FromArray(types));
   state->archetypes_.entity_position_->label_ = "Entity+Position";
 
-  state->world_.entity_manager_->CreateEntity(state->archetypes_.entity_position_, nullptr, 1);
+  state->world_.entity_manager_->CreateEntities(state->archetypes_.entity_position_, nullptr, 1);
 }
 
 void game::GameUpdate(GameState* state) {

@@ -63,7 +63,7 @@ struct EntityQueryMask {
   EntityManager* entity_manager_; // ???
 };
 
-// An entity query is just a place where we keep track of archetypes (and it's chunks) that have matching component types
+// An entity query is an expression of a data dependency.
 struct EntityQuery {
   ComponentTypeId*           all_;
   ComponentDataAccess::Mode* all_access_mode_;
@@ -110,5 +110,8 @@ struct EntityQuery {
   u32 HashCode();
 
   bool Equals(const EntityQuery& other);
+
+  // count the number of entities matched by query
+  i32 Count();
 };
 } // namespace game

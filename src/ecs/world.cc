@@ -14,18 +14,20 @@ void World::Create(Slice<const TypeInfo> components) {
   entity_manager_->Create(this, 1024);
 
   system_list_  = List<System*>::WithAllocator(MEM_ALLOC_HEAP);
-  system_state_ = List<SystemState>::WithAllocator(MEM_ALLOC_HEAP);
+  system_state_ = List<SystemState*>::WithAllocator(MEM_ALLOC_HEAP);
 }
 
 void World::Destroy() {
   for (int i = 0; i < system_list_.Len(); i++) {
     System*      system = system_list_[i];
-    SystemState& state  = system_state_[i];
+    SystemState* state  = system_state_[i];
 
-    if ((state.flags_ & (SystemState::FLAG_CREATED | SystemState::FLAG_DESTROYED)) == SystemState::FLAG_CREATED) {
-      system->OnDestroy(state);
-      state.flags_ |= SystemState::FLAG_DESTROYED;
+    if ((state->flags_ & (SystemState::FLAG_CREATED | SystemState::FLAG_DESTROYED)) == SystemState::FLAG_CREATED) {
+      system->OnDestroy(*state);
+      state->flags_ |= SystemState::FLAG_DESTROYED;
     }
+
+    MemFree(MEM_ALLOC_HEAP, state);
   }
 
   system_list_.Destroy();
@@ -42,7 +44,7 @@ void World::Destroy() {
 void World::Update() {
   for (int i = 0; i < system_list_.Len(); i++) {
     System*      system = system_list_[i];
-    SystemState& state  = system_state_[i];
+    SystemState& state  = *system_state_[i];
 
     // If the system is not created and not destroyed we will create it
     if ((state.flags_ & (SystemState::FLAG_CREATED | SystemState::FLAG_DESTROYED)) == 0) {

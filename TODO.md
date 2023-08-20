@@ -1,4 +1,5 @@
-# Camera
+PNG loader needs cleanup
 
-- Camera kernel
-- 3D cube, basic shader
+Draw textured quad in xz plane
+
+Cube rendering system needs depth and view/projection matrix

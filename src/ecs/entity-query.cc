@@ -31,32 +31,34 @@ bool MergeJoinAll(const ComponentTypeId* query, i32 query_len, const ComponentTy
   return k == query_len;
 }
 
-bool MergeJoinAny(const ComponentTypeId* query, i32 query_len, const ComponentTypeId* archetype, i32 archetype_len) {
-  int i = 0, j = 0;
-  for (; i < query_len && j < archetype_len;) {
-    if (query[i] < archetype[j]) {
-      i++;
-      continue;
-    }
-    if (archetype[j] < query[i]) {
-      j++;
-      continue;
-    }
-    if (query[i] == archetype[j]) {
-      return true;
-    }
-  }
-  return false;
-}
+// bool MergeJoinAny(const ComponentTypeId* query, i32 query_len, const ComponentTypeId* archetype, i32 archetype_len) {
+//   int i = 0, j = 0;
+//   for (; i < query_len && j < archetype_len;) {
+//     if (query[i] < archetype[j]) {
+//       i++;
+//       continue;
+//     }
+//     if (archetype[j] < query[i]) {
+//       j++;
+//       continue;
+//     }
+//     if (query[i] == archetype[j]) {
+//       return true;
+//     }
+//   }
+//   return false;
+// }
 } // namespace
 
 bool EntityQuery::IsMatch(Archetype* archetype) {
+  // required components
   bool all = MergeJoinAll(all_, all_len_, archetype->types_, archetype->types_len_);
   if (all) {
-    if (0 < any_len_) {
-      bool any = MergeJoinAny(any_, any_len_, archetype->types_, archetype->types_len_);
-      return any;
-    }
+    // optional components
+    // if (0 < any_len_) {
+    //   bool any = MergeJoinAny(any_, any_len_, archetype->types_, archetype->types_len_);
+    //   return any;
+    // }
     return true;
   }
   return false;
@@ -102,4 +104,15 @@ bool EntityQuery::Equals(const EntityQuery& other) {
     return true;
   }
   return false;
+}
+
+i32 EntityQuery::Count() {
+  i32 c = 0;
+  for (auto archetype : matching_archetypes_) {
+    Chunk** chunks = archetype->chunk_data_.ChunkPtrArray();
+    for (i32 i = 0, n = archetype->chunk_data_.Len(); i < n; i++) {
+      c += chunks[i]->EntityCount();
+    }
+  }
+  return c;
 }

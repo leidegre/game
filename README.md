@@ -6,9 +6,21 @@
 >
 > ⚠️🚧🏗️ WORK IN PROGRESS ⚠️🚧🏗️
 
-The project has been setup to support a workflow where VS Code is the primary source code editor. This is not a requirement but the `scripts` written to generate tasks only work with VS Code.
+## What is ECS?
 
-Each folder in the `src` directory is a module. A module is compiled into it's own static library and will have 1 precompiled header. If the module name starts with `cmd_` then it's an executable. If the module name starts with `test_` it's a test. A test is just a bunch of functions to test some function or system.
+ECS is an acronym for Entity-Component-System.
+
+In short, it is just a memory allocator with a bigger API surface. Instead of `malloc` you have `EntityManger::CreateEntity` and instead of `free` you have `EntityManger::DestroyEntity`. Instead of a static `GameObject` type you have a runtime `Archetype` that group entities of the same component types together.
+
+When you create an entity you create a chunk (a block of memory) to hold a number of entities. When you set component data for an entity, you are setting a value in an array of component data of the same type (SOA) inside some chunk.
+
+To make things happen you write systems to coordinate with other systems and read/write component data in chunks. These systems can then be made to process those chunks in parallel.
+
+All of this is important because CPUs are not really getting faster they are getting wider (they can do more things in parallel). Memory access is comparatively slow with respect to CPU throughput and the only way to offset this is to do speculative execution. Straightforward code and linear memory access is preferable because it is easier for the CPU to predict.
+
+## What is DX12?
+
+DX12 is a modern low-level graphics API. It is not cross platform like Vulkan but DX12 can run on Linux using Valve's Proton and on macOS using Apple's Game Porting Toolkit.
 
 ## How the project is organized
 

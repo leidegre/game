@@ -50,24 +50,35 @@ struct EntityManager {
   // ---
 
   // Creates a new entity.
-  void CreateEntity(Archetype* archetype, Entity* entities, i32 count);
+  void CreateEntities(Archetype* archetype, Entity* entities, i32 count);
 
   // Creates a new entity without any components.
   Entity CreateEntity() {
     Entity entity;
-    CreateEntity(entity_archetype_, &entity, 1);
+    CreateEntities(entity_archetype_, &entity, 1);
     return entity;
   }
+
   // Creates a new entity of a specific archetype.
   Entity CreateEntity(Archetype* archetype) {
     Entity entity;
-    CreateEntity(archetype, &entity, 1);
+    CreateEntities(archetype, &entity, 1);
     return entity;
   }
 
   void DestroyEntities(Entity* entities, i32 count);
 
   void DestroyEntity(Entity entity) { DestroyEntities(&entity, 1); }
+
+  // ---
+
+  void _SetComponentData(Entity entity, ComponentTypeId type_id, const void* data);
+
+  template <typename T> void SetComponentData(Entity entity, const T& data) {
+    _SetComponentData(entity, GetComponentTypeId<T>(), &data);
+  }
+
+  // ---
 
   // // Copies an existing entity and creates a new entity from that copy.
   // void Instantiate();

@@ -16,12 +16,13 @@ using u64 = uint64_t;
 
 using f32 = float;
 
+// constant expression for getting the static length of an array. the type of the length is a signed 32-bit integer
 template <i32 N, typename T> constexpr i32 ArrayLength(T (&array)[N]) {
   return N;
 }
 
-// A slice is a view of memory that may or may not be read only.
-// If slice is passed as Slice<const T> the memory is read only.
+// A view of memory that may or may not be read only.
+// If passed as Slice<const T> the memory is read only.
 template <typename T> struct Slice {
   T*  ptr_;
   i32 len_;
