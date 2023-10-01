@@ -72,7 +72,10 @@ struct Renderer {
   ID3D12RootSignature* grid_root_signature_;
   ID3D12PipelineState* grid_pso_;
   ID3D12Resource*      grid_xz_tex_;
+  ID3D12Resource*      grid_xz_tex_upload_;
   ID3D12Resource*      grid_xy_tex_;
+
+  UINT32 dxgi_info_queue_message_count_;
 };
 
 LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);

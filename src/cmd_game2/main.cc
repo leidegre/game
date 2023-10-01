@@ -79,7 +79,7 @@ int main(int, char**) {
   SystemState&       box_rendering_system_state = w.Register(&box_rendering_system);
 
   box_rendering_system.renderer_ = r;
-  box_rendering_system.OnCreate(box_rendering_system_state);
+  // box_rendering_system.OnCreate(box_rendering_system_state);
 
   for (; RenderUpdateInput(*r);) {
     local_to_world_system.OnUpdate(local_to_world_system_state);
@@ -140,7 +140,7 @@ int main(int, char**) {
 
     // ---
 
-    box_rendering_system.OnUpdate(box_rendering_system_state);
+    // box_rendering_system.OnUpdate(box_rendering_system_state);
 
     RenderFrameEnd(*r);
 
@@ -151,7 +151,7 @@ int main(int, char**) {
 
   local_to_world_system.OnDestroy(local_to_world_system_state);
 
-  box_rendering_system.OnDestroy(box_rendering_system_state);
+  // box_rendering_system.OnDestroy(box_rendering_system_state);
 
   RenderShutdown(*r);
 

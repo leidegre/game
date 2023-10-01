@@ -53,8 +53,13 @@ for (const test of targets.tests) {
       execSync(command, {
         stdio: "inherit",
       })
-    } catch {
-      process.exit(1) // continue on error true or false
+    } catch (err) {
+      console.error(
+        "test exited with non-zero exit code",
+        err.status,
+        typeof err.status === "number" ? "(0x" + err.status.toString(16) + ")" : ""
+      )
+      process.exit(1) // continue on error true or false?
     }
   }
 }

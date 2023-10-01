@@ -47,6 +47,8 @@ bool game::RenderInit(Renderer** renderer) {
     return false;
   }
 
+  // todo: recover window position from file if possible
+
   r->wnd_ = ::CreateWindowW(
       wc.lpszClassName,
       L"Game",
@@ -63,7 +65,7 @@ bool game::RenderInit(Renderer** renderer) {
 
   // ---
 
-  // If we want to use the debug layer it must be initialized before we create any D3D device
+  // If we want to use the debug layer it must be enabled before we create any device
 
   HRESULT err;
 
@@ -105,6 +107,7 @@ bool game::RenderInit(Renderer** renderer) {
   if (FAILED(err)) {
     return false;
   }
+  r->rtv_desc_heap_->SetName(L"RTV Descriptor Heap");
 
   UINT                        rtv_desc_size = r->dev_->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
   D3D12_CPU_DESCRIPTOR_HANDLE rtv_base      = r->rtv_desc_heap_->GetCPUDescriptorHandleForHeapStart();
@@ -124,7 +127,7 @@ bool game::RenderInit(Renderer** renderer) {
     return false;
   }
 
-  // Create a command queue
+  // Create a "direct" command queue
 
   D3D12_COMMAND_QUEUE_DESC cmd_queue_desc = {};
   cmd_queue_desc.Type                     = D3D12_COMMAND_LIST_TYPE_DIRECT;
@@ -190,7 +193,7 @@ bool game::RenderInit(Renderer** renderer) {
 
   IDXGISwapChain1* swap_chain1 = nullptr;
   err                          = dxgi_factory4->CreateSwapChainForHwnd(
-      r->cmd_queue_, // For Direct3D 12 this is a pointer to a direct command queue
+      r->cmd_queue_, // For Direct3D 12 this should be a pointer to a "direct" command queue
       r->wnd_,
       &swap_chain_desc,
       nullptr,
@@ -261,13 +264,13 @@ bool game::RenderInit(Renderer** renderer) {
     if (FAILED(err)) {
       return false;
     }
+    r->grid_xz_tex_->SetName(L"xz-grid-1024.png (default)"); // ???
 
     UINT64 tex1_buffer_size;
 
     r->dev_->GetCopyableFootprints(&tex1_desc, 0, 1, 0, nullptr, nullptr, nullptr, &tex1_buffer_size);
 
     // this is like a staging area for the texture upload
-    ID3D12Resource*       tex_upload;
     CD3DX12_RESOURCE_DESC tex_upload_buffer_desc = CD3DX12_RESOURCE_DESC::Buffer(tex1_buffer_size);
 
     CD3DX12_HEAP_PROPERTIES tex_heap_upload = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
@@ -278,16 +281,17 @@ bool game::RenderInit(Renderer** renderer) {
         &tex_upload_buffer_desc,
         D3D12_RESOURCE_STATE_GENERIC_READ,
         nullptr,
-        IID_PPV_ARGS(&tex_upload));
+        IID_PPV_ARGS(&r->grid_xz_tex_upload_));
     if (FAILED(err)) {
       return false;
     }
+    r->grid_xz_tex_upload_->SetName(L"xz-grid-1024.png (upload)");
 
     // Ideally we copy directly into this buffer.
     void* tex_upload_ptr;
-    tex_upload->Map(0, nullptr, &tex_upload_ptr);
+    r->grid_xz_tex_upload_->Map(0, nullptr, &tex_upload_ptr);
     memcpy(tex_upload_ptr, tex1.tex_data_, tex1.tex_data_size_);
-    tex_upload->Unmap(0, nullptr);
+    r->grid_xz_tex_upload_->Unmap(0, nullptr);
 
     ID3D12GraphicsCommandList& cmd_list = *r->cmd_list_;
 
@@ -297,7 +301,7 @@ bool game::RenderInit(Renderer** renderer) {
     dest.SubresourceIndex            = 0;
 
     D3D12_TEXTURE_COPY_LOCATION src        = {};
-    src.pResource                          = tex_upload;
+    src.pResource                          = r->grid_xz_tex_upload_;
     src.Type                               = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
     src.PlacedFootprint.Offset             = 0;
     src.PlacedFootprint.Footprint.Format   = DXGI_FORMAT_R8G8B8A8_UNORM; // Your format here
@@ -576,6 +580,20 @@ bool game::RenderShutdown(Renderer& r) {
 
   // ---
 
+  // Tear down resources
+
+  if (r.grid_xz_tex_) {
+    r.grid_xz_tex_->Release();
+    r.grid_xz_tex_ = nullptr;
+  }
+
+  if (r.grid_xz_tex_upload_) {
+    r.grid_xz_tex_upload_->Release();
+    r.grid_xz_tex_upload_ = nullptr;
+  }
+
+  // ---
+
   // Tear down DX12
 
   for (int i = 0; i < RENDERER_BACK_BUFFER_COUNT; i++) {
@@ -595,6 +613,21 @@ bool game::RenderShutdown(Renderer& r) {
     r.swap_chain_waitable_obj_ = INVALID_HANDLE_VALUE;
   }
 
+  if (r.fence_event_) {
+    CloseHandle(r.fence_event_);
+    r.fence_event_ = INVALID_HANDLE_VALUE;
+  }
+
+  if (r.fence_) {
+    r.fence_->Release();
+    r.fence_ = nullptr;
+  }
+
+  if (r.cmd_list_) {
+    r.cmd_list_->Release();
+    r.cmd_list_ = nullptr;
+  }
+
   for (int i = 0; i < RENDERER_BACK_BUFFER_COUNT; i++) {
     r.cmd_allocator_[i]->Release();
     r.cmd_allocator_[i] = nullptr;
@@ -605,9 +638,9 @@ bool game::RenderShutdown(Renderer& r) {
     r.cmd_queue_ = nullptr;
   }
 
-  if (r.cmd_list_) {
-    r.cmd_list_->Release();
-    r.cmd_list_ = nullptr;
+  if (r.cbv_desc_heap_) {
+    r.cbv_desc_heap_->Release();
+    r.cbv_desc_heap_ = nullptr;
   }
 
   if (r.rtv_desc_heap_) {
@@ -615,22 +648,22 @@ bool game::RenderShutdown(Renderer& r) {
     r.rtv_desc_heap_ = nullptr;
   }
 
-  if (r.cbv_desc_heap_) {
-    r.cbv_desc_heap_->Release();
-    r.cbv_desc_heap_ = nullptr;
-  }
-
-  if (r.fence_) {
-    r.fence_->Release();
-    r.fence_ = nullptr;
-  }
-
-  if (r.fence_event_) {
-    CloseHandle(r.fence_event_);
-    r.fence_event_ = INVALID_HANDLE_VALUE;
-  }
-
   if (r.dev_) {
+#ifdef DX12_ENABLE_DEBUG_LAYER
+    // If SetBreakOnSeverity has been used we must disable it otherwise
+    // we will get a lot of DXGI_ERROR_NOT_FOUND exceptions when calling ReportLiveObjects
+    ID3D12Debug*     debug_layer;
+    ID3D12InfoQueue* info_queue = nullptr;
+    if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debug_layer)))) {
+      r.dev_->QueryInterface(IID_PPV_ARGS(&info_queue));
+      info_queue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, false);
+      info_queue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, false);
+      info_queue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, false);
+      info_queue->Release();
+      debug_layer->Release();
+    }
+#endif
+
     r.dev_->Release();
     r.dev_ = nullptr;
   }
@@ -638,10 +671,31 @@ bool game::RenderShutdown(Renderer& r) {
 #ifdef DX12_ENABLE_DEBUG_LAYER
   IDXGIDebug1* dxgi_debug = nullptr;
   if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgi_debug)))) {
-    dxgi_debug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_SUMMARY);
+    DXGI_DEBUG_RLO_FLAGS flags = DXGI_DEBUG_RLO_FLAGS(
+        DXGI_DEBUG_RLO_DETAIL |        // default
+        DXGI_DEBUG_RLO_IGNORE_INTERNAL // something UWP
+    );
+    dxgi_debug->ReportLiveObjects(DXGI_DEBUG_ALL, flags);
     dxgi_debug->Release();
+  }
+
+  IDXGIInfoQueue* dxgi_info_queue = nullptr;
+  if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgi_info_queue)))) {
+    char   message_buffer[2048];
+    SIZE_T message_size;
+    for (UINT64 i = 0; i < dxgi_info_queue->GetNumStoredMessages(DXGI_DEBUG_ALL); i++) {
+      DXGI_INFO_QUEUE_MESSAGE* m = (DXGI_INFO_QUEUE_MESSAGE*)message_buffer;
+      message_size               = sizeof(message_buffer);
+      dxgi_info_queue->GetMessageW(DXGI_DEBUG_ALL, i, m, &message_size);
+      printf("%s\n", m->pDescription);
+      r.dxgi_info_queue_message_count_++;
+    }
   }
 #endif
 
   return true;
+}
+
+uint32_t game::RenderDebugInfoQueueMessageCount(Renderer& r) {
+  return r.dxgi_info_queue_message_count_;
 }

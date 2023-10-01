@@ -2,6 +2,15 @@
 
 #include "type-system.hh"
 
+// #ifndef _HRESULT_DEFINED
+// #define _HRESULT_DEFINED
+// #ifdef __midl
+// typedef LONG HRESULT;
+// #else
+// typedef _Return_type_success_(return >= 0) long HRESULT;
+// #endif // __midl
+// #endif // !_HRESULT_DEFINED
+
 namespace game {
 enum ErrorCode {
   GRR_OK = 0, // not an error
@@ -17,8 +26,13 @@ enum ErrorCode {
 struct Error {
   ErrorCode code_;
 
+  // u32 result_; // depends on code_
+
   Error() { code_ = GRR_OK; }
   Error(ErrorCode code) { code_ = code; }
+
+  // ifdef _WINNT_
+  // Error(HRESULT result) { code_ = code; }
 
   bool Ok() const { return code_ == 0; }
   bool HasError() const { return !(code_ == 0); }

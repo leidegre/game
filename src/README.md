@@ -26,4 +26,4 @@ Data members use `snake_case_`, that is each word is delimited by `_` (underscor
 
 We mostly use blittable, trivially copyable, structs. The memory for these data types can be allocated from anywhere. We use `Create(...)` to initialize and `Destroy()` to cleanup.
 
-We don't use access specifiers. All data members should be public but it's a bad idea to access data member directly outside a particular package without going tough a public API.
+We don't use access specifiers. All data members should be public but don't go access data members directly from outside a package without going tough a public API.

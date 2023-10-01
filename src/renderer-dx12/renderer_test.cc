@@ -24,5 +24,9 @@ int main(int, char**) {
     puts("cannot shutdown renderer");
     return 1;
   }
+  if (RenderDebugInfoQueueMessageCount(*r)) {
+    puts("debug info queue message count should be zero");
+    return 1;
+  }
   return 0;
 }

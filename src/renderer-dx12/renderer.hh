@@ -33,4 +33,6 @@ bool RenderWaitForPrev(Renderer& render);
 
 // Cleanup rendering system
 bool RenderShutdown(Renderer& render);
+
+uint32_t RenderDebugInfoQueueMessageCount(Renderer& render);
 } // namespace game
