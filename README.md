@@ -31,6 +31,14 @@ DX12 is a modern low-level graphics API. It is not cross platform like Vulkan bu
 
 ## How to build
 
+When you make changes that change the dependency graph you need to run `node .\scripts\generate-units.mjs`.
+
+Changes that change the dependency graph are
+
+- Adding source files
+- Adding new package includes
+- Adding new packages
+
 I don't check-in the vendor source files because most of them are available online. You will need to download them and place them in the vendor directory.
 
 You will need to download and install the VS 2019 Build Tools and [Tundra](https://github.com/deplinenoise/tundra). Tundra is a high-performance code build system with excellent incremental build times.

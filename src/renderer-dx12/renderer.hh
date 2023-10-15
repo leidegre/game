@@ -6,6 +6,8 @@ namespace game {
 // pointer to implementation of rendering system
 struct Renderer;
 
+// Create/Destroy? or "get size API" so that the renderer struct can be allocated externally?
+
 // Initialize the rendering system
 bool RenderInit(Renderer** render);
 

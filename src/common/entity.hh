@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../math/data.hh"
+#include "type-system.hh"
 
 // Define component
 #define GAME_COMPONENT(Component)                                                                                      \

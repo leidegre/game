@@ -144,7 +144,7 @@ int main(int, char**) {
 
     RenderFrameEnd(*r);
 
-    MemResetTemp(); // ideally this is called automatically between system transitions
+    MemResetTemp(); // call this automatically between system transitions?
   }
 
   RenderWaitForPrev(*r);

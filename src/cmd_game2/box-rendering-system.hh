@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../renderer-dx12/renderer.inl"
+#include "../renderer-dx12/renderer-inl.hh"
 
 #include "../ecs/system.hh"
 

@@ -26,6 +26,9 @@ enum {
   RENDERER_BACK_BUFFER_COUNT = 2,
 };
 
+// Maybe we should draw some inspiration from this example?
+// https://github.com/microsoft/DirectX-Graphics-Samples/blob/master/TechniqueDemos/D3D12MemoryManagement/src/Framework.cpp#L689
+
 struct Renderer {
   HWND wnd_;
 

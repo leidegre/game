@@ -65,6 +65,17 @@ void test_assertion_fail();
 
 #define ASSERT_EQUAL_FLOAT(expected, actual, tolerance) _ASSERT_EQUAL_F(float, expected, actual, tolerance)
 
+#define ASSERT_EQUAL_STR(expected, actual)                                                                             \
+  do {                                                                                                                 \
+    test_assert_metadata _metadata = { __FILE__, __LINE__, #expected, #actual };                                       \
+    test_str             expected2 = { expected, strlen(expected) };                                                   \
+    test_str             actual2   = { actual, strlen(actual) };                                                       \
+    if (!test_assert_eq_str(&expected2, &actual2, &_metadata)) {                                                       \
+      test_assertion_fail();                                                                                           \
+      return 1;                                                                                                        \
+    }                                                                                                                  \
+  } while (0)
+
 #define ASSERT_EQUAL_STRLEN(expected, actual, actual_size)                                                             \
   do {                                                                                                                 \
     test_assert_metadata _metadata = { __FILE__, __LINE__, #expected, #actual };                                       \

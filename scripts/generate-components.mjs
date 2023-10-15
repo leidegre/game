@@ -36,7 +36,8 @@ import("file:///" + resolve(argv[0])).then(
 
     let hh = "#pragma once\n\n"
     hh += DISCLAIMER
-    hh += '#include "../ecs/type-system.hh"\n'
+    hh += '#include "../common/entity.hh"\n'
+    hh += '#include "../math/data.hh"\n'
     hh += "\n"
     hh += "namespace game {\n"
     for (const [component, meta] of componentTypeMap) {

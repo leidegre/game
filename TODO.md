@@ -1,7 +1,5 @@
-PNG loader needs cleanup
+- Fix window resize
 
-Draw textured quad in xz plane
+- Vehicle platform design
 
-Cube rendering system needs depth and view/projection matrix
-
-Fix window resize
+- Procedural placement of "doodads"

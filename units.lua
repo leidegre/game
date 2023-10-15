@@ -32,6 +32,10 @@ local package_deps = conv.flatten_package_deps {
         "libecs",
         "librenderer-dx12"
     },
+    ["vdv"] = {
+        "libcommon",
+        "librenderer-dx12"
+    },
     ["librenderer-dx12"] = {
         "libcommon",
         "libloader",

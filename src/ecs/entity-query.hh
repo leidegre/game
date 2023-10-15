@@ -1,7 +1,6 @@
 #pragma once
 
-#include "type-system.hh"
-
+#include "../common/entity.hh"
 #include "../common/list.hh"
 
 namespace game {

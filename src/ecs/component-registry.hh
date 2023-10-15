@@ -1,6 +1,6 @@
 #pragma once
 
-#include "type-system.hh"
+#include "../common/entity.hh"
 
 namespace game {
 struct ComponentRegistry {

@@ -150,25 +150,10 @@ Build {
         }
     },
     Units = {
-        function()
-            -- where should this go? 
-            ExternalLibrary {
-                Name = "win32",
-                Propagate = {
-                    Defines = {},
-                    Includes = {},
-                    Libs = {
-                        "user32.lib",
-                        "ws2_32.lib",
-                        "opengl32.lib",
-                        "gdi32.lib",
-                        "bcrypt.lib" -- BCryptGenRandom
-                    }
-                }
-            }
-        end,
         "units-vendor.lua",
-        "units-conv.lua", -- convention based build utilities
-        "units.lua"
+        -- "units-conv.lua", -- convention based build utilities
+        -- "units.lua" 
+        "units-generated.lua",
+        "units2.lua"
     }
 }

@@ -62,11 +62,11 @@ template <typename T> constexpr Slice<const T> FromInitializer(std::initializer_
 } // namespace slice
 
 enum Allocator {
-  // Memory came from somewhere else. Cannot realloc or free this memory.
-  MEM_ALLOC_NONE = 0,
+  // Memory allocated from heap. You must eventually free this memory. (default)
+  MEM_ALLOC_HEAP = 0,
 
-  // Memory allocated from heap. You must eventually free this memory.
-  MEM_ALLOC_HEAP,
+  // Memory came from somewhere else. Cannot realloc or free this memory.
+  MEM_ALLOC_NONE,
 
   // Temp memory. Temp memory is very short lived. Think of it as memory allocated on the stack. You can free temp memory but it doesn't leak if you don't.
   MEM_ALLOC_TEMP,

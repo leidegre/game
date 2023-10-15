@@ -1,0 +1,12 @@
+{
+  "headers": {
+    "d3d12.h": "d3d12",
+    "imgui.h": "imgui",
+    "png.h": ["png", "zlib"],
+    "Windows.h": "windows",
+    "xxhash.h": "xxhash"
+  },
+  "units": {
+    "windows": { "config": "win64-*-*" }
+  }
+}

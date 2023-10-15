@@ -43,9 +43,6 @@ StaticLibrary {
     Includes = {
         "vendor/zlib-1.2.13"
     },
-    Defines = {
-        "PNG_USER_MEM_SUPPORTED"
-    },
     Propagate = {
         Includes = {
             "vendor/zlib-1.2.13"
@@ -79,6 +76,9 @@ StaticLibrary {
     Includes = {
         "vendor/lpng1639"
     },
+    Defines = {
+        -- "PNG_USER_MEM_SUPPORTED"
+    },
     Propagate = {
         Includes = {
             "vendor/lpng1639"
@@ -99,7 +99,22 @@ ExternalLibrary {
 }
 
 ExternalLibrary {
-    Name = "dx12ext",
+    Name = "windows",
+    Propagate = {
+        Defines = {},
+        Includes = {},
+        Libs = {
+            "user32.lib",
+            "ws2_32.lib",
+            "opengl32.lib",
+            "gdi32.lib",
+            "bcrypt.lib" -- BCryptGenRandom
+        }
+    }
+}
+
+ExternalLibrary {
+    Name = "d3d12",
     Includes = {},
     Propagate = {
         Includes = {
